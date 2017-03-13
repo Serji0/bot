@@ -1,15 +1,14 @@
 #!/usr/bin/python3
-import logging
+#import logging
 import datetime
 import os
 
 import data_control
-from configuration import Configuration
+#from configuration import Configuration
 
 import telegram
 from telegram import ReplyKeyboardMarkup, KeyboardButton
 from telegram.ext import CommandHandler, MessageHandler, Filters, Updater
-
 
 
 b_line = KeyboardButton('Линия')
@@ -382,22 +381,23 @@ def terminal_command_handle():
 
 if __name__ == "__main__":
     # Настройка логирования
-    if not os.path.exists('/root/bot/logs/main.log'):
+    '''if not os.path.exists('/root/bot/logs/main.log'):
         if not os.path.exists('/root/bot/logs/'):
             os.mkdir('/root/bot/logs/')
         with open('/root/bot/logs/main.log', 'w') as f:
             f.write('[[[ LOGFILE BOUND TO < {} >  MODULE ]]]\n\n'.format(os.path.split(__file__)[1]))
     logging.basicConfig(filename='/root/bot/logs/main.log', format='<%(asctime)s> [%(name)s] [%(levelname)s]: %(message)s',
-                        level=logging.INFO)
+                        level=logging.INFO)'''
 
     # Настройка конфигурирования
-    bot_conf = Configuration('/root/bot/conf/access.ini')
+    #bot_conf = Configuration('/root/bot/conf/access.ini')
 
-    logging.info('Script execution started')
+    #logging.info('Script execution started')
     print('Script started')
 
     try:
-        telegram_token = bot_conf.get_option('Main', 'TelegramToken')
+        telegram_token = '374736040:AAHG-ZGYmDZu4HtSSIw0H0VoITf36DfV3Ts'
+            #bot_conf.get_option('Main', 'TelegramToken')
         updater = Updater(token=telegram_token)
     except (telegram.error.InvalidToken, ValueError):
         print('Critical Error > Telegram Access Token is invalid. Terminal halted.\nCheck the configuration file.')
@@ -418,15 +418,14 @@ if __name__ == "__main__":
     telegram_command_handle(updater)
     updater.start_polling()
 
-    logging.info('Started main updater polling')
+    #logging.info('Started main updater polling')
     print('Running the main script normally')
 
     # Режим терминала
     terminal_command_handle()
 
     # Отключение бота
-    logging.info('Stopping main updater polling')
+    #logging.info('Stopping main updater polling')
     print('Stopping the main script...')
-    updater.stop()
-    logging.info('Script execution ended')
+    #logging.info('Script execution ended')
     print('Main script stopped')
