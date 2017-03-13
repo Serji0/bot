@@ -45,7 +45,9 @@ class Connection:
         self.connect()
         c = self.connection.cursor()
         c.execute('SELECT telegram_id FROM app_user')
-        users = list(c.fetchall()[0])
+        users = c.fetchall()
+        if users: users = list(users[0])
+        else: users = []
         c.close()
         self.disconnect()
         return users
