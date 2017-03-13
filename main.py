@@ -403,7 +403,7 @@ if __name__ == "__main__":
         print('Critical Error > Telegram Access Token is invalid. Terminal halted.\nCheck the configuration file.')
         exit()
 
-    con = data_control.Connection('root', 'root', 'betbot')
+    con = data_control.Connection('root', 'Yor8nsKt', 'betbot')
 
     users = (con.get_all_users())
     for user in users:
