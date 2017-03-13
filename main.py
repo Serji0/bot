@@ -10,10 +10,7 @@ import telegram
 from telegram import ReplyKeyboardMarkup, KeyboardButton
 from telegram.ext import CommandHandler, MessageHandler, Filters, Updater
 
-mode = ''
-event_id = 0
-event_teams = ''
-max_bet = ''
+
 
 b_line = KeyboardButton('Линия')
 b_account = KeyboardButton('Личный кабинет')
@@ -34,14 +31,12 @@ b_home = KeyboardButton('На главную')
 main_keyboard = ReplyKeyboardMarkup([[b_line], [b_account], [b_info]], one_time_keyboard=0)
 start_keyboard = ReplyKeyboardMarkup([[b_register]], one_time_keyboard=1)
 info_keyboard = ReplyKeyboardMarkup([[b_rules], [b_support], [b_home]], one_time_keyboard=0)
-account_keyboard = ReplyKeyboardMarkup([[b_balance], [b_record], [b_back], [b_home]], one_time_keyboard=0)
+account_keyboard = ReplyKeyboardMarkup([[b_balance], [b_record], [b_home]], one_time_keyboard=0)
 balance_keyboard = ReplyKeyboardMarkup([[b_deposit], [b_withdraw], [b_back], [b_home]], one_time_keyboard=0)
 register_keyboard = ReplyKeyboardMarkup([[b_yes], [b_no]], one_time_keyboard=0)
-bet_keyboard = ReplyKeyboardMarkup([[b_yes], [b_cancel]], one_time_keyboard=0)
-sport_keyboard = ReplyKeyboardMarkup([[]], one_time_keyboard=0)
-leagues_keyboard = ReplyKeyboardMarkup([[]], one_time_keyboard=0)
-events_keyboard = ReplyKeyboardMarkup([[]], one_time_keyboard=0)
-ratios_keyboard = ReplyKeyboardMarkup([[]], one_time_keyboard=0)
+
+dic = dict()
+
 
 
 # Обработка текста
@@ -52,30 +47,24 @@ def echo(bot, update):
     :param update:
     :return:
     """
-    global mode
-    global qiwi
-    global sport_keyboard
-    global leagues_keyboard
-    global events_keyboard
-    global ratios_keyboard
-    global event_id
-    global event_teams
+
+    global dic
+
     global b_back
-    global choice
-    global max_bet
     utext = update.message.text
     utext_cf = utext.casefold()
     uchat = update.message.chat_id
 
     if utext_cf == 'зарегистрироваться' or utext_cf == 'ввести ещё раз':
-        bot.sendMessage(chat_id=uchat, text='Введите свой QIWI-кошелек в формате +7ХХХХХХХХХХ \n  Например: "+79106887538"')
-        mode = 'qiwi'
+        bot.sendMessage(chat_id=uchat,
+                        text='Введите свой QIWI-кошелек в формате +7ХХХХХХХХХХ \n  Например: "+79106887538"')
+        dic[str(uchat)]['mode'] = 'qiwi'
     elif utext_cf == 'на главную':
-        mode = ''
+        dic[str(uchat)]['mode'] = ''
         bot.sendMessage(chat_id=uchat, text='Выберите пункт', reply_markup=main_keyboard)
     elif utext_cf == 'да, всё верно':
-        con.add_user(uchat, qiwi, 0)
-        mode = ''
+        con.add_user(uchat, dic[str(uchat)]['qiwi'], 0)
+        dic[str(uchat)]['mode'] = ''
         bot.sendMessage(chat_id=uchat, text='Вы уcпешно зарегистрированы', reply_markup=main_keyboard)
     elif utext_cf == 'линия':
         sports = con.get_sports()
@@ -83,9 +72,9 @@ def echo(bot, update):
         for sport in sports:
             sports1.append([sport])
         sports1.append([b_home])
-        sport_keyboard = ReplyKeyboardMarkup(sports1, one_time_keyboard=0)
-        bot.sendMessage(chat_id=uchat, text='Выберите вид спорта', reply_markup=sport_keyboard)
-        mode = 'sport'
+        dic[str(uchat)]['sport_keyboard'] = ReplyKeyboardMarkup(sports1, one_time_keyboard=0)
+        bot.sendMessage(chat_id=uchat, text='Выберите вид спорта', reply_markup=dic[str(uchat)]['sport_keyboard'])
+        dic[str(uchat)]['mode'] = 'sport'
     elif utext_cf == 'личный кабинет':
         user = con.get_user_by_telegram_id(uchat)
         response = 'Ваш аккаунт - ' + str(user[3])
@@ -94,25 +83,25 @@ def echo(bot, update):
         user = con.get_user_by_telegram_id(uchat)
         response = 'Ваш баланс равен ' + str(user[2]) + 'р.'
         bot.sendMessage(chat_id=uchat, text=response, reply_markup=balance_keyboard)
-        mode = 'balance'
+        dic[str(uchat)]['mode'] = 'balance'
 
-    elif mode == 'balance':
+    elif dic[str(uchat)]['mode'] == 'balance':
         if utext_cf == 'назад':
             user = con.get_user_by_telegram_id(uchat)
             response = 'Ваш аккаунт - ' + str(user[3])
             bot.sendMessage(chat_id=uchat, text=response, reply_markup=account_keyboard)
-            mode = ''
+            dic[str(uchat)]['mode'] = ''
         elif utext_cf == 'пополнить счет':
             response = 'На данный момент, бот работает с одной платёжной системой: QIWI. Для того, чтобы делать ставки, пополните пожалуйста счёт со своего QIWI-кошелька, который вы указали при регистрации. Ваш баланс пополнится в течение пяти минут. \n' \
                        'Сделайте перевод на QIWI-кошелёк бота: +79106887538. \n' \
                        'Всегда могут возникнуть технические неполадки. Если происходит задержка с пополнением более 10 минут, вы можете написать в тех. поддержку: @ioffside.'
             bot.sendMessage(chat_id=uchat, text=response, reply_markup=main_keyboard)
-            mode = ''
+            dic[str(uchat)]['mode'] = ''
         elif utext_cf == 'вывести средства':
             bot.sendMessage(chat_id=uchat, text='Введите сумму для вывода в рублях')
-            mode = 'withdraw'
+            dic[str(uchat)]['mode'] = 'withdraw'
 
-    elif mode == 'withdraw':
+    elif dic[str(uchat)]['mode'] == 'withdraw':
         con.add_request(uchat, utext_cf, 'withdraw')
         bot.sendMessage(chat_id=uchat, text='Ваш запрос принят', reply_markup=main_keyboard)
 
@@ -134,29 +123,29 @@ def echo(bot, update):
                 response += '\n'
 
         bot.sendMessage(chat_id=uchat, text=response, reply_markup=main_keyboard)
-    elif mode == 'qiwi':
+    elif dic[str(uchat)]['mode'] == 'qiwi':
         if utext_cf[0] == '+' and len(utext_cf) > 11 and len(utext_cf) < 15:
-            mode = ''
-            qiwi = utext_cf
-            bot.sendMessage(chat_id=uchat, text='Ваш qiwi-кошелек - ' + qiwi + ' ?', reply_markup=register_keyboard)
+            dic[str(uchat)]['mode'] = ''
+            dic[str(uchat)]['qiwi'] = utext_cf
+            bot.sendMessage(chat_id=uchat, text='Ваш qiwi-кошелек - ' + dic[str(uchat)]['qiwi'] + ' ?', reply_markup=register_keyboard)
         else:
             bot.sendMessage(chat_id=uchat, text='Ошибка, попробуйте еще раз', reply_markup=start_keyboard)
-            mode = ''
-    elif mode == 'sport':
+            dic[str(uchat)]['mode'] = ''
+    elif dic[str(uchat)]['mode'] == 'sport':
         leagues = con.get_leagues_by_sport(str(utext_cf))
         leagues1 = []
         for league in leagues:
             leagues1.append([league])
         leagues1.append([b_back])
         leagues1.append([b_home])
-        leagues_keyboard = ReplyKeyboardMarkup(leagues1, one_time_keyboard=0)
-        bot.sendMessage(chat_id=uchat, text='Выберите лигу', reply_markup=leagues_keyboard)
-        mode = 'league'
+        dic[str(uchat)]['leagues_keyboard'] = ReplyKeyboardMarkup(leagues1, one_time_keyboard=0)
+        bot.sendMessage(chat_id=uchat, text='Выберите лигу', reply_markup=dic[str(uchat)]['leagues_keyboard'])
+        dic[str(uchat)]['mode'] = 'league'
 
-    elif mode == 'league':
+    elif dic[str(uchat)]['mode'] == 'league':
         if utext_cf == 'назад':
-            mode = 'sport'
-            bot.sendMessage(chat_id=uchat, text='Выберите пункт', reply_markup=sport_keyboard)
+            dic[str(uchat)]['mode'] = 'sport'
+            bot.sendMessage(chat_id=uchat, text='Выберите пункт', reply_markup=dic[str(uchat)]['sport_keyboard'])
         else:
             events = con.get_events_by_league(str(utext_cf))
             events1 = []
@@ -164,51 +153,51 @@ def echo(bot, update):
                 events1.append([event])
             events1.append([b_back])
             events1.append([b_home])
-            events_keyboard = ReplyKeyboardMarkup(events1, one_time_keyboard=0)
-            bot.sendMessage(chat_id=uchat, text='Выберите событие', reply_markup=events_keyboard)
-            mode = 'event'
+            dic[str(uchat)]['events_keyboard'] = ReplyKeyboardMarkup(events1, one_time_keyboard=0)
+            bot.sendMessage(chat_id=uchat, text='Выберите событие', reply_markup=dic[str(uchat)]['events_keyboard'])
+            dic[str(uchat)]['mode'] = 'event'
 
-    elif mode == 'event':
+    elif dic[str(uchat)]['mode'] == 'event':
         if utext_cf == 'назад':
-            mode = 'league'
-            bot.sendMessage(chat_id=uchat, text='Выберите пункт', reply_markup=leagues_keyboard)
+            dic[str(uchat)]['mode'] = 'league'
+            bot.sendMessage(chat_id=uchat, text='Выберите пункт', reply_markup=dic[str(uchat)]['leagues_keyboard'])
         else:
             event = con.get_ratios_by_teams(str(utext_cf))
             event.append([b_back])
             event.append([b_home])
-            max_bet = con.get_maxbet_by_teams(str(utext_cf))
-            event_teams = str(utext_cf)
-            event_id = con.get_event_id_by_teams(str(utext_cf))
-            ratios_keyboard = ReplyKeyboardMarkup(event, one_time_keyboard=0)
-            bot.sendMessage(chat_id=uchat, text='Выберите исход', reply_markup=ratios_keyboard)
-            mode = 'bet'
+            dic[str(uchat)]['max_bet'] = con.get_maxbet_by_teams(str(utext_cf))
+            dic[str(uchat)]['event_teams'] = str(utext_cf)
+            dic[str(uchat)]['event_id'] = con.get_event_id_by_teams(str(utext_cf))
+            dic[str(uchat)]['ratios_keyboard'] = ReplyKeyboardMarkup(event, one_time_keyboard=0)
+            bot.sendMessage(chat_id=uchat, text='Выберите исход', reply_markup=dic[str(uchat)]['ratios_keyboard'])
+            dic[str(uchat)]['mode'] = 'bet'
 
-    elif mode == 'bet':
+    elif dic[str(uchat)]['mode'] == 'bet':
         if utext_cf == 'назад':
-            mode = 'event'
-            bot.sendMessage(chat_id=uchat, text='Выберите исход', reply_markup=events_keyboard)
+            dic[str(uchat)]['mode'] = 'event'
+            bot.sendMessage(chat_id=uchat, text='Выберите исход', reply_markup=dic[str(uchat)]['events_keyboard'])
         else:
-            response = 'Ваш выбор: ' + event_teams + ' ' + \
-                       str(utext_cf) + '. Пожалуйста, введите сумму ставки в рублях. Max = ' + str(max_bet)
-            choice = str(utext_cf)
+            response = 'Ваш выбор: ' + dic[str(uchat)]['event_teams'] + ' ' + \
+                       str(utext_cf) + '. Пожалуйста, введите сумму ставки в рублях. Min = 5, Max = ' + str(dic[str(uchat)]['max_bet'])
+            dic[str(uchat)]['choice'] = str(utext_cf)
             bot.sendMessage(chat_id=uchat, text=response)
-            mode = 'make_bet'
+            dic[str(uchat)]['mode'] = 'make_bet'
 
-    elif mode == 'make_bet':
-        response = con.add_bet(uchat, event_teams, choice, str(utext_cf))
+    elif dic[str(uchat)]['mode'] == 'make_bet':
+        response = con.add_bet(uchat, dic[str(uchat)]['event_teams'], dic[str(uchat)]['choice'], str(utext_cf))
         bot.sendMessage(chat_id=uchat, text=response, reply_markup=main_keyboard)
 
     elif utext_cf == 'назад':
-        mode = ''
+        dic[str(uchat)]['mode'] = ''
         bot.sendMessage(chat_id=uchat, text='Выберите пункт', reply_markup=main_keyboard)
 
     elif utext_cf == 'справка':
-        mode = ''
+        dic[str(uchat)]['mode'] = ''
         response = 'Приветствуем вас в пункте "Справка".\n' \
                    '"Справка" поможет вам, если вы ввёли неверно свой QIWI-кошелёк при регистрации. Пожалуйста, напишите запрос на адрес: @ioffside и вам сменят указанный при регистрации кошелек, на кошелек, с которого вы собираетесь пополнять счёт. Очень просим, делайте запрос в одном посте, с максимальной информацией. \n' \
                    'Так как бот молодой, то и событий пока будет немного. Только основные чемпионаты в разных видах спорта. \n' \
                    'Общие положения: \n' \
-                   'Максимальная сумма ставки: 1000 руб\n' \
+                   'Максимальная сумма ставки зависит от события\n' \
                    'Минимальная сумма ставки: 5 руб. \n' \
                    'Правила рассчёта ставок: \n' \
                    'Футбол:\n' \
@@ -229,6 +218,7 @@ def echo(bot, update):
     utext = update.message.text
     utext_cf = utext.casefold()
     uchat = update.message.chat_id
+
     # Несколько тестовых проверок на совпадения
     if 'привет' in utext_cf:
         bot.sendMessage(chat_id=uchat, text='Привет, друг! Хочешь кофейку, или секретное задание?',
@@ -283,6 +273,7 @@ def echo(bot, update):
         result = lang.analyse(uchat, utext)
         if result:
             delay = round((result[0].date_notify - datetime.datetime.now()).total_seconds())
+
             if delay < 0:
                 bot.sendMessage(chat_id=uchat,
                                 text='Пожалуй, я не смогу напомнить о событии, '
@@ -326,13 +317,20 @@ def echo(bot, update):
 
 
 def start(bot, update):
+    global dic
     user = con.get_user_by_telegram_id(update.message.chat_id)
     if user:
-        bot.sendMessage(chat_id= update.message.chat_id, text='Мы рады, что вы вернулись', reply_markup=main_keyboard)
+        bot.sendMessage(chat_id=update.message.chat_id, text='Мы рады, что вы вернулись', reply_markup=main_keyboard)
     else:
+        dic[str(update.message.chat_id)] = {'mode': '', 'qiwi': '', 'event_id': '', 'event_teams': '',
+                                            'sport_keyboard': ReplyKeyboardMarkup([[]], one_time_keyboard=0),
+                                            'leagues_keyboard': ReplyKeyboardMarkup([[]], one_time_keyboard=0),
+                                            'events_keyboard': ReplyKeyboardMarkup([[]], one_time_keyboard=0),
+                                            'ratios_keyboard': ReplyKeyboardMarkup([[]], one_time_keyboard=0),
+                                            'choice': '', 'max_bet': ''}
         bot.sendMessage(chat_id=update.message.chat_id,
-                    text='Чтобы начать делать ставки в боте, в котором вы сейчас находитесь, необходимо пройти регистрацию. Пожалуйста, нажмите "Зарегистрироваться" и следуйте дальнейшим инструкциям бота. Обращаем ваше внимание на то, что при регистрации вводите ТОЧНЫЙ свой QIWI-кошелек, с которого будете пополнять и именно на этот же кошелек вам будут приходить ваши выигрыши.',
-                    reply_markup=start_keyboard)
+                        text='Чтобы начать делать ставки в боте, в котором вы сейчас находитесь, необходимо пройти регистрацию. Пожалуйста, нажмите "Зарегистрироваться" и следуйте дальнейшим инструкциям бота. Обращаем ваше внимание на то, что при регистрации вводите ТОЧНЫЙ свой QIWI-кошелек, с которого будете пополнять и именно на этот же кошелек вам будут приходить ваши выигрыши.',
+                        reply_markup=start_keyboard)
     logging.info('Command \'start\' invoked by chat id [{0}]'.format(update.message.chat_id))
 
 
@@ -385,7 +383,7 @@ def terminal_command_handle():
 if __name__ == "__main__":
     # Настройка логирования
     if not os.path.exists('/root/bot/logs/main.log'):
-        if not os.path.exists('logs/'):
+        if not os.path.exists('/root/bot/logs/'):
             os.mkdir('/root/bot/logs/')
         with open('/root/bot/logs/main.log', 'w') as f:
             f.write('[[[ LOGFILE BOUND TO < {} >  MODULE ]]]\n\n'.format(os.path.split(__file__)[1]))
@@ -406,6 +404,15 @@ if __name__ == "__main__":
         exit()
 
     con = data_control.Connection('root', 'Yor8nsKt', 'betbot')
+
+    users = (con.get_all_users())
+    for user in users:
+        dic[str(user)] = {'mode': '', 'qiwi': '', 'event_id': '', 'event_teams': '',
+                                            'sport_keyboard': ReplyKeyboardMarkup([[]], one_time_keyboard=0),
+                                            'leagues_keyboard': ReplyKeyboardMarkup([[]], one_time_keyboard=0),
+                                            'events_keyboard': ReplyKeyboardMarkup([[]], one_time_keyboard=0),
+                                            'ratios_keyboard': ReplyKeyboardMarkup([[]], one_time_keyboard=0),
+                                            'choice': '', 'max_bet': ''}
 
     # Обработка команд из чата Telegram
     telegram_command_handle(updater)

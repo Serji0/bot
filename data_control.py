@@ -1,7 +1,6 @@
 import MySQLdb
 
 
-
 class Connection:
     def __init__(self, user, password, db, host='localhost'):
         self.user = user
@@ -41,6 +40,17 @@ class Connection:
         self.connection.commit()
         c.close()
         self.disconnect()
+
+    def get_all_users(self):
+        self.connect()
+        c = self.connection.cursor()
+        c.execute('SELECT telegram_id FROM app_user')
+        users = c.fetchall()
+        if users: users = list(users[0])
+        else: users = []
+        c.close()
+        self.disconnect()
+        return users
 
     def get_bets(self, id):
         self.connect()
@@ -155,6 +165,7 @@ class Connection:
         self.disconnect()
         return id
 
+
     def get_bets_by_user_event_choice(self, u_id, e_id, choice):
         self.connect()
         c = self.connection.cursor()
@@ -169,7 +180,7 @@ class Connection:
         max = self.get_maxbet_by_teams(teams)
         if float(sum) > max:
             response = 'Слишком большая сумма ставки'
-        elif float(sum) < 5:
+        elif float(sum) < 6:
             response = 'Слишком маленькая сумма ставки'
         else:
             user = self.get_user_by_telegram_id(id)
@@ -178,46 +189,51 @@ class Connection:
                 response = 'Недостаточно средств на счете'
             else:
                 event = self.get_event_id_by_teams(teams)
-                user_id = user[0]
-                s = choice.find(' - ')
-                pick = choice[:s]
-                if pick == 'п1':
-                    pick = 'win1'
-                elif pick == 'х':
-                    pick = 'draw'
-                elif pick == 'п2':
-                    pick = 'win2'
-                elif 'тм' in pick:
-                    pick = 'under'
-                elif 'тб' in pick:
-                    pick = 'over'
-
-                bet = self.get_bets_by_user_event_choice(id, event, pick)
-                if bet:
-                    response = 'Вы уже сделали ставку на этот исход'
+                status = self.get_event_by_id(event)[15]
+                if status != 'active':
+                    response = 'Прием ставок на это событие завершен'
                 else:
-                    ratio = choice[s + 3:]
-                    balance -= float(sum)
-                    self.connect()
-                    c = self.connection.cursor()
-                    c.execute(
-                        "INSERT INTO app_bet (event_id, user_id, amount, ratio, choice, status) VALUES (%s, %s, %s, %s, %s, %s);",
-                        (event, user_id, sum, ratio, pick, 'unknown'))
-                    self.connection.commit()
-                    c.execute('UPDATE app_user SET balance = %s WHERE id = %s;', (str(balance), str(user_id)))
-                    self.connection.commit()
-                    c.close()
-                    self.disconnect()
-                    response = 'Ваша ставка принята'
+                    user_id = user[0]
+                    s = choice.find(' - ')
+                    pick = choice[:s]
+                    if pick == 'п1':
+                        pick = 'win1'
+                    elif pick == 'х':
+                        pick = 'draw'
+                    elif pick == 'п2':
+                        pick = 'win2'
+                    elif 'тм' in pick:
+                        pick = 'under'
+                    elif 'тб' in pick:
+                        pick = 'over'
+
+                    bet = self.get_bets_by_user_event_choice(id, event, pick)
+                    if bet:
+                        response = 'Вы уже сделали ставку на этот исход'
+                    else:
+                        ratio = choice[s + 3:]
+                        balance -= float(sum)
+                        self.connect()
+                        c = self.connection.cursor()
+                        c.execute(
+                            "INSERT INTO app_bet (event_id, user_id, amount, ratio, choice, status) VALUES (%s, %s, %s, %s, %s, %s);",
+                            (event, user_id, sum, ratio, pick, 'unknown'))
+                        self.connection.commit()
+                        c.execute('UPDATE app_user SET balance = %s WHERE id = %s;', (str(balance), str(user_id)))
+                        self.connection.commit()
+                        c.close()
+                        self.disconnect()
+                        response = 'Ваша ставка принята'
         return response
 
     def add_request(self, id, comment, type):
         self.connect()
         user = self.get_user_by_telegram_id(id)
         user_id = user[0]
+        self.connect()
         c = self.connection.cursor()
-        c.execute("INSERT INTO app_request (user_id, comment, type, status) VALUES (%s, %s, %s, %s);",
-                  (user_id, comment, type, 'new'))
+        c.execute("INSERT INTO app_request (user_id, comment, type, status) VALUES (%s, %s, %s, %s);", (user_id, comment, type, 'new'))
         self.connection.commit()
-        self.disconnect()
         c.close()
+        self.disconnect()
+
