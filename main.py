@@ -384,12 +384,12 @@ def terminal_command_handle():
 
 if __name__ == "__main__":
     # Настройка логирования
-    if not os.path.exists('logs/main.log'):
+    if not os.path.exists('/root/bot/logs/main.log'):
         if not os.path.exists('logs/'):
-            os.mkdir('logs/')
-        with open('logs/main.log', 'w') as f:
+            os.mkdir('/root/bot/logs/')
+        with open('/root/bot/logs/main.log', 'w') as f:
             f.write('[[[ LOGFILE BOUND TO < {} >  MODULE ]]]\n\n'.format(os.path.split(__file__)[1]))
-    logging.basicConfig(filename='logs/main.log', format='<%(asctime)s> [%(name)s] [%(levelname)s]: %(message)s',
+    logging.basicConfig(filename='/root/bot/logs/main.log', format='<%(asctime)s> [%(name)s] [%(levelname)s]: %(message)s',
                         level=logging.INFO)
 
     # Настройка конфигурирования
