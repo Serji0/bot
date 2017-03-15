@@ -1,15 +1,14 @@
-#!/usr/bin/python3
-#import logging
+#!/usr/bin/env python3
+import logging
 import datetime
 import os
 
 import data_control
-#from configuration import Configuration
+from configuration import Configuration
 
 import telegram
 from telegram import ReplyKeyboardMarkup, KeyboardButton
 from telegram.ext import CommandHandler, MessageHandler, Filters, Updater
-
 
 b_line = KeyboardButton('Линия')
 b_account = KeyboardButton('Личный кабинет')
@@ -35,7 +34,6 @@ balance_keyboard = ReplyKeyboardMarkup([[b_deposit], [b_withdraw], [b_back], [b_
 register_keyboard = ReplyKeyboardMarkup([[b_yes], [b_no]], one_time_keyboard=0)
 
 dic = dict()
-
 
 
 # Обработка текста
@@ -126,7 +124,8 @@ def echo(bot, update):
         if utext_cf[0] == '+' and len(utext_cf) > 11 and len(utext_cf) < 15:
             dic[str(uchat)]['mode'] = ''
             dic[str(uchat)]['qiwi'] = utext_cf
-            bot.sendMessage(chat_id=uchat, text='Ваш qiwi-кошелек - ' + dic[str(uchat)]['qiwi'] + ' ?', reply_markup=register_keyboard)
+            bot.sendMessage(chat_id=uchat, text='Ваш qiwi-кошелек - ' + dic[str(uchat)]['qiwi'] + ' ?',
+                            reply_markup=register_keyboard)
         else:
             bot.sendMessage(chat_id=uchat, text='Ошибка, попробуйте еще раз', reply_markup=start_keyboard)
             dic[str(uchat)]['mode'] = ''
@@ -167,7 +166,7 @@ def echo(bot, update):
             dic[str(uchat)]['max_bet'] = con.get_maxbet_by_teams(str(utext_cf))
             dic[str(uchat)]['event_teams'] = str(utext_cf)
             dic[str(uchat)]['event_id'] = con.get_event_id_by_teams(str(utext_cf))
-            dic[str(uchat)]['ratios_keyboard'] = ReplyKeyboardMarkup(event, one_time_keyboard=0)
+            dic[str(uchat)]['ratios_keyboard'] = ReplyKeyboardMarkup(event, one_time_keyboard=1)
             bot.sendMessage(chat_id=uchat, text='Выберите исход', reply_markup=dic[str(uchat)]['ratios_keyboard'])
             dic[str(uchat)]['mode'] = 'bet'
 
@@ -176,15 +175,23 @@ def echo(bot, update):
             dic[str(uchat)]['mode'] = 'event'
             bot.sendMessage(chat_id=uchat, text='Выберите исход', reply_markup=dic[str(uchat)]['events_keyboard'])
         else:
+            balance = str(con.get_user_by_telegram_id(uchat)[2])
             response = 'Ваш выбор: ' + dic[str(uchat)]['event_teams'] + ' ' + \
-                       str(utext_cf) + '. Пожалуйста, введите сумму ставки в рублях. Min = 5, Max = ' + str(dic[str(uchat)]['max_bet'])
+                       str(utext_cf) + '. Пожалуйста, введите сумму ставки в рублях. Min = 5, Max = ' + \
+                       str(dic[str(uchat)][
+                               'max_bet']) + '(Ваш баланс = ' + balance + 'р.)' + '\n Для отмены ввода введите "отмена"'
             dic[str(uchat)]['choice'] = str(utext_cf)
             bot.sendMessage(chat_id=uchat, text=response)
             dic[str(uchat)]['mode'] = 'make_bet'
 
+
     elif dic[str(uchat)]['mode'] == 'make_bet':
-        response = con.add_bet(uchat, dic[str(uchat)]['event_teams'], dic[str(uchat)]['choice'], str(utext_cf))
-        bot.sendMessage(chat_id=uchat, text=response, reply_markup=main_keyboard)
+        if utext_cf == 'отмена':
+            dic[str(uchat)]['mode'] = 'event'
+            bot.sendMessage(chat_id=uchat, text='Выберите исход', reply_markup=dic[str(uchat)]['ratios_keyboard'])
+        else:
+            response = con.add_bet(uchat, dic[str(uchat)]['event_teams'], dic[str(uchat)]['choice'], str(utext_cf))
+            bot.sendMessage(chat_id=uchat, text=response, reply_markup=main_keyboard)
 
     elif utext_cf == 'назад':
         dic[str(uchat)]['mode'] = ''
@@ -212,108 +219,6 @@ def echo(bot, update):
                    'Если матч не доигран по какой-либо причине, то ставка рассчитывается с коэффициентом 1. \n'
         bot.sendMessage(chat_id=uchat, text=response, reply_markup=main_keyboard)
 
-    '''
-    global mode
-    utext = update.message.text
-    utext_cf = utext.casefold()
-    uchat = update.message.chat_id
-
-    # Несколько тестовых проверок на совпадения
-    if 'привет' in utext_cf:
-        bot.sendMessage(chat_id=uchat, text='Привет, друг! Хочешь кофейку, или секретное задание?',
-                        reply_markup=keyboard)
-    elif utext_cf == 'справка':
-        response = 'Список доступных команд:\n' \
-                   '/start - Проверка работоспособности бота\n' \
-                   '/help - Справка по использованию бота\n\n' \
-                   'Для добавления нового события нажмите на кнопку "Добавить событие", а затем введите информацию о нем в формате:\n' \
-                   '{Дата события} {Время события} {Описание события}\n' \
-                   'Например:\n' \
-                   '01.01.2017 00:00 Поздравить друзей с Новым Годом\n' \
-                   '< или >\n' \
-                   '01.01.17 00:00 Поздравить друзей с Новым Годом\n\n' \
-                   'Также, поддерживается расширенный формат ввода\n' \
-                   'После указания даты и времени можно указать дату и время ' \
-                   'напоминания по такому же формату и категорию вида < #{категория} >\n' \
-                   'Например:\n' \
-                   '08.02.2017 09:00 01.02.2017 20:00 #работа День Рождения начальника\n\n' \
-                   'Для удаления события нажмите на кнопку "Удалить событие", а затем введите его описание\n' \
-                   'Все прошедшие события удаляются автоматически\n' \
-                   'Бот умеет говорить умные фразы! Пообщайтесь с ним!'
-        bot.sendMessage(chat_id=update.message.chat_id, text=response, reply_markup=keyboard)
-    elif utext.casefold() == 'добавить событие':
-        mode = '+'
-        response = 'Введите данные о событии в формате:\n[Дата события] [Время события] [Описание события]\n\n' \
-                   'Например:\n' \
-                   '01.01.2345 00:00 Отпраздновать Галактический Новый Год!\n' \
-                   '20.12.16 18:00 Экзамен в Технопарке\n\n' \
-                   'Для отмены ввода напишите "Отмена"'
-        bot.sendMessage(chat_id=uchat, text=response)
-    elif utext_cf == 'удалить событие':
-        response = 'О каком событии мне не напоминать тебе? Введи название события, пожалуйста.\n\n' \
-                   'Для отмены ввода напишите "Отмена"'
-        bot.sendMessage(chat_id=uchat, text=response)
-        mode = '-'
-    elif utext_cf == 'список активных задач':
-        db_control.start()
-        chat_id = update.message.chat_id
-        event_list = db_control.get_info(chat_id)
-        if event_list == '':
-            response = 'Хмм... Кажется, активных событий сейчас нет. Может, настало время исправить это?'
-        else:
-            response = 'Список текущих активных задач:\n\n'
-            response += event_list
-        bot.sendMessage(chat_id=update.message.chat_id, text=response, reply_markup=keyboard)
-    elif utext_cf == 'отмена':
-        mode = ''
-        bot.sendMessage(chat_id=uchat, text='Выберите действие', reply_markup=keyboard)
-    elif mode == '+':
-        lang = language_processing.LanguageProcessing()
-        result = lang.analyse(uchat, utext)
-        if result:
-            delay = round((result[0].date_notify - datetime.datetime.now()).total_seconds())
-
-            if delay < 0:
-                bot.sendMessage(chat_id=uchat,
-                                text='Пожалуй, я не смогу напомнить о событии, '
-                                     'если время напоминания уже прошло ¯\_(ツ)_/¯\n'
-                                     'Возможно, время указано неправильно?',
-                                reply_markup=keyboard)
-            else:
-                # Запись события в базу данных
-                # Исправить
-                db_control.start()
-                db_control.add_event(result[0])
-                queue.put(Job(callback, delay, repeat=False,
-                              context=db_control.get_last_id()))
-                db_control.stop()
-                mode = ''
-                # Уведомление об успешной записи
-                if delay > 0:
-                    bot.sendMessage(chat_id=uchat,
-                                    text='Хорошо, я напомню тебе об этом {date}.'.format(
-                                        date=result[0].date_notify_conv),
-                                    reply_markup=keyboard)
-        else:
-            bot.sendMessage(chat_id=uchat,
-                            text='Что-то пошло не так, не могу понять что. '
-                                 'Может, погода испортилась и мои шестеренки теперь хуже крутятся. '
-                                 'Попробуй еще раз, пожалуйста!')
-    elif mode == '-':
-        db_control.start()
-        msg = db_control.delete_event(utext, uchat)
-        db_control.stop()
-        mode = ''
-        bot.sendMessage(chat_id=uchat,
-                        text=msg, reply_markup=keyboard)
-    else:
-        response = 'Что-то пошло не так, не могу понять что. ' \
-                   'Вернее, понять могу, но говорить не буду. ' \
-                   'Попробуй ещё раз, пожалуйста!\n' \
-                   'Введите /help для получения справки.'
-        bot.sendMessage(chat_id=uchat, text=response, reply_markup=keyboard)
-'''
-
 
 def start(bot, update):
     global dic
@@ -325,7 +230,7 @@ def start(bot, update):
                                             'sport_keyboard': ReplyKeyboardMarkup([[]], one_time_keyboard=0),
                                             'leagues_keyboard': ReplyKeyboardMarkup([[]], one_time_keyboard=0),
                                             'events_keyboard': ReplyKeyboardMarkup([[]], one_time_keyboard=0),
-                                            'ratios_keyboard': ReplyKeyboardMarkup([[]], one_time_keyboard=0),
+                                            'ratios_keyboard': ReplyKeyboardMarkup([[]], one_time_keyboard=1),
                                             'choice': '', 'max_bet': ''}
         bot.sendMessage(chat_id=update.message.chat_id,
                         text='Чтобы начать делать ставки в боте, в котором вы сейчас находитесь, необходимо пройти регистрацию. Пожалуйста, нажмите "Зарегистрироваться" и следуйте дальнейшим инструкциям бота. Обращаем ваше внимание на то, что при регистрации вводите ТОЧНЫЙ свой QIWI-кошелек, с которого будете пополнять и именно на этот же кошелек вам будут приходить ваши выигрыши.',
@@ -381,23 +286,23 @@ def terminal_command_handle():
 
 if __name__ == "__main__":
     # Настройка логирования
-    '''if not os.path.exists('/root/bot/logs/main.log'):
-        if not os.path.exists('/root/bot/logs/'):
-            os.mkdir('/root/bot/logs/')
-        with open('/root/bot/logs/main.log', 'w') as f:
+    if not os.path.exists('logs/main.log'):
+        if not os.path.exists('logs/'):
+            os.mkdir('logs/')
+        with open('logs/main.log', 'w') as f:
             f.write('[[[ LOGFILE BOUND TO < {} >  MODULE ]]]\n\n'.format(os.path.split(__file__)[1]))
-    logging.basicConfig(filename='/root/bot/logs/main.log', format='<%(asctime)s> [%(name)s] [%(levelname)s]: %(message)s',
-                        level=logging.INFO)'''
+    logging.basicConfig(filename='logs/main.log', format='<%(asctime)s> [%(name)s] [%(levelname)s]: %(message)s',
+                        level=logging.INFO)
 
     # Настройка конфигурирования
-    #bot_conf = Configuration('/root/bot/conf/access.ini')
+    # bot_conf = Configuration('conf/access.ini')
 
-    #logging.info('Script execution started')
+    logging.info('Script execution started')
     print('Script started')
 
     try:
         telegram_token = '374736040:AAHG-ZGYmDZu4HtSSIw0H0VoITf36DfV3Ts'
-            #bot_conf.get_option('Main', 'TelegramToken')
+        # bot_conf.get_option('Main', 'TelegramToken')
         updater = Updater(token=telegram_token)
     except (telegram.error.InvalidToken, ValueError):
         print('Critical Error > Telegram Access Token is invalid. Terminal halted.\nCheck the configuration file.')
@@ -408,24 +313,25 @@ if __name__ == "__main__":
     users = (con.get_all_users())
     for user in users:
         dic[str(user)] = {'mode': '', 'qiwi': '', 'event_id': '', 'event_teams': '',
-                                            'sport_keyboard': ReplyKeyboardMarkup([[]], one_time_keyboard=0),
-                                            'leagues_keyboard': ReplyKeyboardMarkup([[]], one_time_keyboard=0),
-                                            'events_keyboard': ReplyKeyboardMarkup([[]], one_time_keyboard=0),
-                                            'ratios_keyboard': ReplyKeyboardMarkup([[]], one_time_keyboard=0),
-                                            'choice': '', 'max_bet': ''}
+                          'sport_keyboard': ReplyKeyboardMarkup([[]], one_time_keyboard=0),
+                          'leagues_keyboard': ReplyKeyboardMarkup([[]], one_time_keyboard=0),
+                          'events_keyboard': ReplyKeyboardMarkup([[]], one_time_keyboard=0),
+                          'ratios_keyboard': ReplyKeyboardMarkup([[]], one_time_keyboard=0),
+                          'choice': '', 'max_bet': ''}
 
     # Обработка команд из чата Telegram
     telegram_command_handle(updater)
     updater.start_polling()
 
-    #logging.info('Started main updater polling')
+    logging.info('Started main updater polling')
     print('Running the main script normally')
 
     # Режим терминала
     terminal_command_handle()
 
     # Отключение бота
-    #logging.info('Stopping main updater polling')
+    logging.info('Stopping main updater polling')
     print('Stopping the main script...')
-    #logging.info('Script execution ended')
+    updater.stop()
+    logging.info('Script execution ended')
     print('Main script stopped')

@@ -135,9 +135,9 @@ class Connection:
         events1.append([buf])
         buf = 'П2 - ' + str(event[8])
         events1.append([buf])
-        buf = 'ТМ' + str(event[9]) + ' - ' + str(event[10])
+        buf = 'ТМ' + str(event[9]) + ' - ' + str(event[11])
         events1.append([buf])
-        buf = 'ТБ' + str(event[9]) + ' - ' + str(event[11])
+        buf = 'ТБ' + str(event[9]) + ' - ' + str(event[10])
         events1.append([buf])
         c.close()
         self.disconnect()
@@ -151,6 +151,7 @@ class Connection:
         c = self.connection.cursor()
         c.execute('SELECT max_bet from app_event WHERE team1 = %s AND team2 = %s', (str(team1), str(team2)))
         maxbet = c.fetchone()[0]
+        c.close()
         self.disconnect()
         return maxbet
 
@@ -162,6 +163,7 @@ class Connection:
         c = self.connection.cursor()
         c.execute('SELECT id from app_event WHERE team1 = %s AND team2 = %s', (str(team1), str(team2)))
         id = c.fetchone()[0]
+        c.close()
         self.disconnect()
         return id
 
@@ -173,6 +175,7 @@ class Connection:
         c.execute('SELECT * from app_bet WHERE user_id = %s AND event_id = %s AND choice = %s',
                   (str(user), str(e_id), str(choice)))
         bets = (c.fetchall())
+        c.close()
         return bets
 
     def add_bet(self, id, teams, choice, sum):
@@ -180,7 +183,7 @@ class Connection:
         max = self.get_maxbet_by_teams(teams)
         if float(sum) > max:
             response = 'Слишком большая сумма ставки'
-        elif float(sum) < 6:
+        elif float(sum) < 5:
             response = 'Слишком маленькая сумма ставки'
         else:
             user = self.get_user_by_telegram_id(id)
@@ -198,7 +201,7 @@ class Connection:
                     pick = choice[:s]
                     if pick == 'п1':
                         pick = 'win1'
-                    elif pick == 'х':
+                    elif pick == 'x':
                         pick = 'draw'
                     elif pick == 'п2':
                         pick = 'win2'
@@ -212,6 +215,7 @@ class Connection:
                         response = 'Вы уже сделали ставку на этот исход'
                     else:
                         ratio = choice[s + 3:]
+                        potential = float(sum)*float(ratio)
                         balance -= float(sum)
                         self.connect()
                         c = self.connection.cursor()
@@ -221,9 +225,11 @@ class Connection:
                         self.connection.commit()
                         c.execute('UPDATE app_user SET balance = %s WHERE id = %s;', (str(balance), str(user_id)))
                         self.connection.commit()
+                        c.execute('SELECT id from app_bet WHERE user_id = %s',(user_id, ))
+                        number = c.fetchall()[-1][0]
                         c.close()
                         self.disconnect()
-                        response = 'Ваша ставка принята'
+                        response = 'Ваша ставка принята, номер ставки: ' + str(number) + '\n Возможный выигрыш = ' + str(potential) + 'р.'
         return response
 
     def add_request(self, id, comment, type):
