@@ -223,15 +223,16 @@ def echo(bot, update):
 def start(bot, update):
     global dic
     user = con.get_user_by_telegram_id(update.message.chat_id)
+    dic[str(update.message.chat_id)] = {'mode': '', 'qiwi': '', 'event_id': '', 'event_teams': '',
+                                        'sport_keyboard': ReplyKeyboardMarkup([[]], one_time_keyboard=0),
+                                        'leagues_keyboard': ReplyKeyboardMarkup([[]], one_time_keyboard=0),
+                                        'events_keyboard': ReplyKeyboardMarkup([[]], one_time_keyboard=0),
+                                        'ratios_keyboard': ReplyKeyboardMarkup([[]], one_time_keyboard=1),
+                                        'choice': '', 'max_bet': ''}
     if user:
         bot.sendMessage(chat_id=update.message.chat_id, text='Мы рады, что вы вернулись', reply_markup=main_keyboard)
     else:
-        dic[str(update.message.chat_id)] = {'mode': '', 'qiwi': '', 'event_id': '', 'event_teams': '',
-                                            'sport_keyboard': ReplyKeyboardMarkup([[]], one_time_keyboard=0),
-                                            'leagues_keyboard': ReplyKeyboardMarkup([[]], one_time_keyboard=0),
-                                            'events_keyboard': ReplyKeyboardMarkup([[]], one_time_keyboard=0),
-                                            'ratios_keyboard': ReplyKeyboardMarkup([[]], one_time_keyboard=1),
-                                            'choice': '', 'max_bet': ''}
+
         bot.sendMessage(chat_id=update.message.chat_id,
                         text='Чтобы начать делать ставки в боте, в котором вы сейчас находитесь, необходимо пройти регистрацию. Пожалуйста, нажмите "Зарегистрироваться" и следуйте дальнейшим инструкциям бота. Обращаем ваше внимание на то, что при регистрации вводите ТОЧНЫЙ свой QIWI-кошелек, с которого будете пополнять и именно на этот же кошелек вам будут приходить ваши выигрыши.',
                         reply_markup=start_keyboard)
