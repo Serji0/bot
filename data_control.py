@@ -44,13 +44,18 @@ class Connection:
     def get_all_users(self):
         self.connect()
         c = self.connection.cursor()
-        c.execute('SELECT telegram_id FROM app_user')
+        c.execute("SELECT telegram_id FROM app_user")
         users = c.fetchall()
-        if users: users = list(users[0])
-        else: users = []
+        if users:
+            users = list(users)
+            users1 = []
+            for user in users:
+                users1.append(list(user)[0])
+        else:
+            users1 = []
         c.close()
         self.disconnect()
-        return users
+        return users1
 
     def get_bets(self, id):
         self.connect()

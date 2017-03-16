@@ -179,7 +179,7 @@ def echo(bot, update):
             response = 'Ваш выбор: ' + dic[str(uchat)]['event_teams'] + ' ' + \
                        str(utext_cf) + '. Пожалуйста, введите сумму ставки в рублях. Min = 5, Max = ' + \
                        str(dic[str(uchat)][
-                               'max_bet']) + '(Ваш баланс = ' + balance + 'р.)' + '\n Для отмены ввода введите "отмена"'
+                               'max_bet']) + '\n(Ваш баланс = ' + balance + 'р.)' + '\n Для отмены ввода введите "отмена"'
             dic[str(uchat)]['choice'] = str(utext_cf)
             bot.sendMessage(chat_id=uchat, text=response)
             dic[str(uchat)]['mode'] = 'make_bet'
@@ -232,7 +232,6 @@ def start(bot, update):
     if user:
         bot.sendMessage(chat_id=update.message.chat_id, text='Мы рады, что вы вернулись', reply_markup=main_keyboard)
     else:
-
         bot.sendMessage(chat_id=update.message.chat_id,
                         text='Чтобы начать делать ставки в боте, в котором вы сейчас находитесь, необходимо пройти регистрацию. Пожалуйста, нажмите "Зарегистрироваться" и следуйте дальнейшим инструкциям бота. Обращаем ваше внимание на то, что при регистрации вводите ТОЧНЫЙ свой QIWI-кошелек, с которого будете пополнять и именно на этот же кошелек вам будут приходить ваши выигрыши.',
                         reply_markup=start_keyboard)
@@ -258,12 +257,12 @@ def telegram_command_handle(updater):
 def terminal_command_handle():
     while True:
         # Приём команд на выполнение
-        '''response = input('> ').casefold()
+        response = input('> ').casefold()
         if response == 'stop':
             break
         elif response == 'ping':
             print('pong')
-        elif response == 'eadd':
+        '''elif response == 'eadd':
             # Добавляет тестовое событие в базу данных
             e = events.Event(0, datetime.datetime.now(), datetime.datetime.now(), 0, 'datacontrol add')
             db_control.start()
@@ -313,6 +312,7 @@ if __name__ == "__main__":
 
     users = (con.get_all_users())
     for user in users:
+        logging.info('user added '+ str(user))
         dic[str(user)] = {'mode': '', 'qiwi': '', 'event_id': '', 'event_teams': '',
                           'sport_keyboard': ReplyKeyboardMarkup([[]], one_time_keyboard=0),
                           'leagues_keyboard': ReplyKeyboardMarkup([[]], one_time_keyboard=0),
