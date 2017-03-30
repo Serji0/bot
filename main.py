@@ -14,8 +14,6 @@ b_line = KeyboardButton('Линия')
 b_account = KeyboardButton('Личный кабинет')
 b_info = KeyboardButton('Справка')
 b_register = KeyboardButton('Зарегистрироваться')
-b_rules = KeyboardButton('Правила')
-b_support = KeyboardButton('Поддержка')
 b_balance = KeyboardButton('Баланс')
 b_record = KeyboardButton('История ставок')
 b_deposit = KeyboardButton('Пополнить счет')
@@ -25,10 +23,12 @@ b_no = KeyboardButton('Ввести ещё раз')
 b_back = KeyboardButton('Назад')
 b_cancel = KeyboardButton('Отмена')
 b_home = KeyboardButton('На главную')
+b_rules = KeyboardButton('Правила приёма ставок')
+b_feedback = KeyboardButton('Отзывы и пожелания')
 
 main_keyboard = ReplyKeyboardMarkup([[b_line], [b_account], [b_info]], one_time_keyboard=0)
 start_keyboard = ReplyKeyboardMarkup([[b_register]], one_time_keyboard=1)
-info_keyboard = ReplyKeyboardMarkup([[b_rules], [b_support], [b_home]], one_time_keyboard=0)
+info_keyboard = ReplyKeyboardMarkup([[b_rules], [b_feedback], [b_home]], one_time_keyboard=0)
 account_keyboard = ReplyKeyboardMarkup([[b_balance], [b_record], [b_home]], one_time_keyboard=0)
 balance_keyboard = ReplyKeyboardMarkup([[b_deposit], [b_withdraw], [b_back], [b_home]], one_time_keyboard=0)
 register_keyboard = ReplyKeyboardMarkup([[b_yes], [b_no]], one_time_keyboard=0)
@@ -59,6 +59,9 @@ def echo(bot, update):
     elif utext_cf == 'на главную':
         dic[str(uchat)]['mode'] = ''
         bot.sendMessage(chat_id=uchat, text='Выберите пункт', reply_markup=main_keyboard)
+    elif utext_cf == 'справка':
+        dic[str(uchat)]['mode'] = 'info'
+        bot.sendMessage(chat_id=uchat, text='Выберите пункт', reply_markup=info_keyboard)
     elif utext_cf == 'да, всё верно':
         con.add_user(uchat, dic[str(uchat)]['qiwi'], 0)
         dic[str(uchat)]['mode'] = ''
@@ -110,7 +113,8 @@ def echo(bot, update):
         else:
             for bet in bets:
                 event = con.get_event_by_id(bet[5])
-                response += 'Номер: ' + str(bet[0]) + ' ' + str(event[3]) + ' - ' + str(event[4]) + ' ' + str(
+                response += 'Номер: ' + str(bet[0]) + ' ' + str((event[5]).strftime(' %d.%m.%y %H:%M')) + ' ' + str(
+                    event[3]) + ' - ' + str(event[4]) + ' ' + str(
                     bet[1]) + ' ' + str(
                     bet[3]) + 'р. Коэфф: ' + str(bet[2]) + ' '
                 if str(bet[4]) == 'unknown':
@@ -184,7 +188,6 @@ def echo(bot, update):
             bot.sendMessage(chat_id=uchat, text=response)
             dic[str(uchat)]['mode'] = 'make_bet'
 
-
     elif dic[str(uchat)]['mode'] == 'make_bet':
         if utext_cf == 'отмена':
             dic[str(uchat)]['mode'] = 'event'
@@ -193,31 +196,37 @@ def echo(bot, update):
             response = con.add_bet(uchat, dic[str(uchat)]['event_teams'], dic[str(uchat)]['choice'], str(utext_cf))
             bot.sendMessage(chat_id=uchat, text=response, reply_markup=main_keyboard)
 
+    elif dic[str(uchat)]['mode'] == 'info':
+        dic[str(uchat)]['mode'] = ''
+        if str(utext_cf) == 'правила приёма ставок':
+            response = 'Приветствуем вас в пункте "Справка".\n' \
+                       '"Справка" поможет вам, если вы ввёли неверно свой QIWI-кошелёк при регистрации. Пожалуйста, напишите запрос на адрес: @ioffside и вам сменят указанный при регистрации кошелек, на кошелек, с которого вы собираетесь пополнять счёт. Очень просим, делайте запрос в одном посте, с максимальной информацией. \n' \
+                       'Так как бот молодой, то и событий пока будет немного. Только основные чемпионаты в разных видах спорта. \n' \
+                       'Общие положения: \n' \
+                       'Максимальная сумма ставки зависит от события\n' \
+                       'Минимальная сумма ставки: 5 руб. \n' \
+                       'Правила рассчёта ставок: \n' \
+                       'Футбол:\n' \
+                       'Ставка будет рассчитана, если матч доигран до конца или там было сыграно не менее 65 минут 00 секунд. \n' \
+                       'Хоккей: \n' \
+                       'Ставка будет рассчитана, если матч доигран до конца или там было сыграно не менее 54 минуты 00 секунд. \n' \
+                       'Баскетбол: \n' \
+                       'Ставка будет рассчитана, если матч доигран до конца или там было сыграно не менее 39 минут 00 секунд (для НБА). \n' \
+                       'Ставка будет рассчитана, если матч доигран до конца или там было сыграно не менее 33 минуты 00 секунд (для евробаскетбола). \n' \
+                       'Теннис: \n' \
+                       'Если матч не доигран по какой-либо причине, то ставка рассчитывается с коэффициентом 1. \n' \
+                       'Киберспорт: \n' \
+                       'Если матч не доигран по какой-либо причине, то ставка рассчитывается с коэффициентом 1. \n'
+        elif str(utext_cf) == 'отзывы и пожелания':
+            response = 'Дорогие клиенты, мы не просим у вас документы, мы стараемся быстро рассчитывать ставки после окончания матчей (до 5 минут). \n' \
+                       ' Так же мы стараемся почти мгновенно пополнять счёта, и самое главное так же быстро выплачивать ваши выигрыши. \n' \
+                       'Если у вас есть какое-то пожелание, или вы чем-то недовольны, то напишите нам свои слова по адресам: @ioffside , @blockbet. \n'
+        else:
+            response = 'Что-то пошло не так, попробуйте еще раз'
+        bot.sendMessage(chat_id=uchat, text=response, reply_markup=main_keyboard)
     elif utext_cf == 'назад':
         dic[str(uchat)]['mode'] = ''
         bot.sendMessage(chat_id=uchat, text='Выберите пункт', reply_markup=main_keyboard)
-
-    elif utext_cf == 'справка':
-        dic[str(uchat)]['mode'] = ''
-        response = 'Приветствуем вас в пункте "Справка".\n' \
-                   '"Справка" поможет вам, если вы ввёли неверно свой QIWI-кошелёк при регистрации. Пожалуйста, напишите запрос на адрес: @ioffside и вам сменят указанный при регистрации кошелек, на кошелек, с которого вы собираетесь пополнять счёт. Очень просим, делайте запрос в одном посте, с максимальной информацией. \n' \
-                   'Так как бот молодой, то и событий пока будет немного. Только основные чемпионаты в разных видах спорта. \n' \
-                   'Общие положения: \n' \
-                   'Максимальная сумма ставки зависит от события\n' \
-                   'Минимальная сумма ставки: 5 руб. \n' \
-                   'Правила рассчёта ставок: \n' \
-                   'Футбол:\n' \
-                   'Ставка будет рассчитана, если матч доигран до конца или там было сыграно не менее 65 минут 00 секунд. \n' \
-                   'Хоккей: \n' \
-                   'Ставка будет рассчитана, если матч доигран до конца или там было сыграно не менее 54 минуты 00 секунд. \n' \
-                   'Баскетбол: \n' \
-                   'Ставка будет рассчитана, если матч доигран до конца или там было сыграно не менее 39 минут 00 секунд (для НБА). \n' \
-                   'Ставка будет рассчитана, если матч доигран до конца или там было сыграно не менее 33 минуты 00 секунд (для евробаскетбола). \n' \
-                   'Теннис: \n' \
-                   'Если матч не доигран по какой-либо причине, то ставка рассчитывается с коэффициентом 1. \n' \
-                   'Киберспорт: \n' \
-                   'Если матч не доигран по какой-либо причине, то ставка рассчитывается с коэффициентом 1. \n'
-        bot.sendMessage(chat_id=uchat, text=response, reply_markup=main_keyboard)
 
 
 def start(bot, update):
@@ -260,28 +269,8 @@ def terminal_command_handle():
         response = input('> ').casefold()
         if response == 'stop':
             break
-        elif response == 'ping':
-            print('pong')
-        '''elif response == 'eadd':
-            # Добавляет тестовое событие в базу данных
-            e = events.Event(0, datetime.datetime.now(), datetime.datetime.now(), 0, 'datacontrol add')
-            db_control.start()
-            # Добавляем событие и присваиваем ему id количества имеющихся элементов в базе
-            db_control.add_event(e)
-            db_control.stop()
-        elif response == 'eshow':
-            # Выводит события из базы данных на экран
-            db_control.start()
-            for event in db_control.get_events(False):
-                print(event)
-            db_control.stop()
-        elif response == 'lreq':
-            request = input('Enter a message to analyse: ')
-            # В тестовом режиме передается wit-токен равный нулю
-            lang = language_processing.LanguageProcessing()
-            print(lang.analyse(0, request))
         else:
-            print('Unknown command')'''
+            print('Unknown command')
 
 
 if __name__ == "__main__":
@@ -308,11 +297,11 @@ if __name__ == "__main__":
         print('Critical Error > Telegram Access Token is invalid. Terminal halted.\nCheck the configuration file.')
         exit()
 
-    con = data_control.Connection('root', 'Yor8nsKt', 'betbot')
+    con = data_control.Connection('root', 'root', 'betbot')
 
     users = (con.get_all_users())
     for user in users:
-        logging.info('user added '+ str(user))
+        logging.info('user added ' + str(user))
         dic[str(user)] = {'mode': '', 'qiwi': '', 'event_id': '', 'event_teams': '',
                           'sport_keyboard': ReplyKeyboardMarkup([[]], one_time_keyboard=0),
                           'leagues_keyboard': ReplyKeyboardMarkup([[]], one_time_keyboard=0),

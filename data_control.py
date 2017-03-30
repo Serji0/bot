@@ -89,7 +89,7 @@ class Connection:
     def get_leagues_by_sport(self, sport):
         self.connect()
         c = self.connection.cursor()
-        c.execute('SELECT league from app_team WHERE sport = %s', (str(sport),))
+        c.execute('SELECT league from app_event WHERE sport = %s', (str(sport),))
         leagues = c.fetchall()
         leagues1 = []
         for league in leagues:
@@ -106,7 +106,7 @@ class Connection:
         events = c.fetchall()
         events1 = []
         for event in events:
-            ev = str(event[3]) + ' - ' + str(event[4])
+            ev = str((event[5]).strftime(' %d.%m.%y %H:%M')) + '   ' + str(event[3]) + ' - ' + str(event[4])
             events1.append(ev)
         c.close()
         self.disconnect()
@@ -115,7 +115,7 @@ class Connection:
     def get_sports(self):
         self.connect()
         c = self._connection.cursor()
-        c.execute('SELECT sport from app_team')
+        c.execute('SELECT sport from app_event')
         sports = c.fetchall()
         sports1 = []
         for sport in sports:
@@ -127,7 +127,8 @@ class Connection:
 
     def get_ratios_by_teams(self, teams):
         s = teams.find(' - ')
-        team1 = teams[:s]
+        s1 = teams.find('   ')
+        team1 = teams[s1 + 3: s]
         team2 = teams[s + 3:]
         self.connect()
         c = self.connection.cursor()
@@ -137,20 +138,32 @@ class Connection:
         buf = 'П1 - ' + str(event[6])
         events1.append([buf])
         buf = 'X - ' + str(event[7])
-        events1.append([buf])
+        events1[0].append(buf)
         buf = 'П2 - ' + str(event[8])
+        events1[0].append(buf)
+        buf = 'Ф1 ('
+        if str(event[16])[0] != '-' and str(event[16])[0] != '0':
+            buf += '+'
+        buf += str(event[16]) + ') - ' + str(event[17])
         events1.append([buf])
-        buf = 'ТМ' + str(event[9]) + ' - ' + str(event[11])
+        buf = 'Ф2 ('
+        if str(event[18])[0] != '-' and str(event[18])[0] != '0':
+            buf += '+'
+        buf += str(event[18]) + ') - ' + str(event[19])
+        events1[1].append(buf)
+        buf = 'ТМ ' + str(event[9]) + ' - ' + str(event[11])
         events1.append([buf])
-        buf = 'ТБ' + str(event[9]) + ' - ' + str(event[10])
-        events1.append([buf])
+        buf = 'ТБ ' + str(event[9]) + ' - ' + str(event[10])
+        events1[2].append(buf)
         c.close()
         self.disconnect()
         return events1
 
+
     def get_maxbet_by_teams(self, teams):
         s = teams.find(' - ')
-        team1 = teams[:s]
+        s1 = teams.find('   ')
+        team1 = teams[s1 + 3: s]
         team2 = teams[s + 3:]
         self.connect()
         c = self.connection.cursor()
@@ -160,9 +173,11 @@ class Connection:
         self.disconnect()
         return maxbet
 
+
     def get_event_id_by_teams(self, teams):
         s = teams.find(' - ')
-        team1 = teams[:s]
+        s1 = teams.find('   ')
+        team1 = teams[s1 + 3: s]
         team2 = teams[s + 3:]
         self.connect()
         c = self.connection.cursor()
@@ -183,8 +198,8 @@ class Connection:
         c.close()
         return bets
 
-    def add_bet(self, id, teams, choice, sum):
 
+    def add_bet(self, id, teams, choice, sum):
         max = self.get_maxbet_by_teams(teams)
         if float(sum) > max:
             response = 'Слишком большая сумма ставки'
@@ -214,13 +229,17 @@ class Connection:
                         pick = 'under'
                     elif 'тб' in pick:
                         pick = 'over'
+                    elif 'ф1' in pick:
+                        pick = 'handicap1'
+                    elif 'ф12' in pick:
+                        pick = 'handicap2'
 
                     bet = self.get_bets_by_user_event_choice(id, event, pick)
                     if bet:
                         response = 'Вы уже сделали ставку на этот исход'
                     else:
                         ratio = choice[s + 3:]
-                        potential = float(sum)*float(ratio)
+                        potential = float(sum) * float(ratio)
                         balance -= float(sum)
                         self.connect()
                         c = self.connection.cursor()
@@ -230,12 +249,14 @@ class Connection:
                         self.connection.commit()
                         c.execute('UPDATE app_user SET balance = %s WHERE id = %s;', (str(balance), str(user_id)))
                         self.connection.commit()
-                        c.execute('SELECT id from app_bet WHERE user_id = %s',(user_id, ))
+                        c.execute('SELECT id from app_bet WHERE user_id = %s', (user_id,))
                         number = c.fetchall()[-1][0]
                         c.close()
                         self.disconnect()
-                        response = 'Ваша ставка принята, номер ставки: ' + str(number) + '\n Возможный выигрыш = ' + str(potential) + 'р.'
+                        response = 'Ваша ставка принята, номер ставки: ' + str(number) + '\n Возможный выигрыш = ' + str(
+                            potential) + 'р.'
         return response
+
 
     def add_request(self, id, comment, type):
         self.connect()
@@ -243,8 +264,8 @@ class Connection:
         user_id = user[0]
         self.connect()
         c = self.connection.cursor()
-        c.execute("INSERT INTO app_request (user_id, comment, type, status) VALUES (%s, %s, %s, %s);", (user_id, comment, type, 'new'))
+        c.execute("INSERT INTO app_request (user_id, comment, type, status) VALUES (%s, %s, %s, %s);",
+                  (user_id, comment, type, 'new'))
         self.connection.commit()
         c.close()
         self.disconnect()
-
