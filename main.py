@@ -98,12 +98,19 @@ def echo(bot, update):
             bot.sendMessage(chat_id=uchat, text=response, reply_markup=main_keyboard)
             dic[str(uchat)]['mode'] = ''
         elif utext_cf == 'вывести средства':
-            bot.sendMessage(chat_id=uchat, text='Введите сумму для вывода в рублях')
+            bot.sendMessage(chat_id=uchat, text='Введите сумму для вывода в рублях \n' \
+                            'Для отмены вывода нажмите "На главную"')
             dic[str(uchat)]['mode'] = 'withdraw'
 
     elif dic[str(uchat)]['mode'] == 'withdraw':
-        con.add_request(uchat, utext_cf, 'withdraw')
-        bot.sendMessage(chat_id=uchat, text='Ваш запрос принят', reply_markup=main_keyboard)
+        if utext_cf == 'назад':
+            user = con.get_user_by_telegram_id(uchat)
+            response = 'Ваш баланс равен ' + str(user[2]) + 'р.'
+            bot.sendMessage(chat_id=uchat, text=response, reply_markup=balance_keyboard)
+            dic[str(uchat)]['mode'] = 'balance'
+        else:
+            con.add_request(uchat, utext_cf, 'withdraw')
+            bot.sendMessage(chat_id=uchat, text='Ваш запрос принят', reply_markup=main_keyboard)
 
     elif utext_cf == 'история ставок':
         bets = con.get_bets(uchat)
@@ -149,6 +156,7 @@ def echo(bot, update):
             dic[str(uchat)]['mode'] = 'sport'
             bot.sendMessage(chat_id=uchat, text='Выберите пункт', reply_markup=dic[str(uchat)]['sport_keyboard'])
         else:
+            dic[str(uchat)]['league'] = str(utext_cf)
             events = con.get_events_by_league(str(utext_cf))
             events1 = []
             for event in events:
@@ -164,12 +172,12 @@ def echo(bot, update):
             dic[str(uchat)]['mode'] = 'league'
             bot.sendMessage(chat_id=uchat, text='Выберите пункт', reply_markup=dic[str(uchat)]['leagues_keyboard'])
         else:
-            event = con.get_ratios_by_teams(str(utext_cf))
+            event = con.get_ratios_by_teams(str(utext_cf), dic[str(uchat)]['league'])
             event.append([b_back])
             event.append([b_home])
-            dic[str(uchat)]['max_bet'] = con.get_maxbet_by_teams(str(utext_cf))
+            dic[str(uchat)]['max_bet'] = con.get_maxbet_by_teams(str(utext_cf), dic[str(uchat)]['league'])
             dic[str(uchat)]['event_teams'] = str(utext_cf)
-            dic[str(uchat)]['event_id'] = con.get_event_id_by_teams(str(utext_cf))
+            dic[str(uchat)]['event_id'] = con.get_event_id_by_teams(str(utext_cf), dic[str(uchat)]['league'])
             dic[str(uchat)]['ratios_keyboard'] = ReplyKeyboardMarkup(event, one_time_keyboard=1)
             bot.sendMessage(chat_id=uchat, text='Выберите исход', reply_markup=dic[str(uchat)]['ratios_keyboard'])
             dic[str(uchat)]['mode'] = 'bet'
@@ -193,7 +201,7 @@ def echo(bot, update):
             dic[str(uchat)]['mode'] = 'event'
             bot.sendMessage(chat_id=uchat, text='Выберите исход', reply_markup=dic[str(uchat)]['ratios_keyboard'])
         else:
-            response = con.add_bet(uchat, dic[str(uchat)]['event_teams'], dic[str(uchat)]['choice'], str(utext_cf))
+            response = con.add_bet(uchat, dic[str(uchat)]['event_teams'], dic[str(uchat)]['choice'], str(utext_cf), dic[str(uchat)]['league'])
             bot.sendMessage(chat_id=uchat, text=response, reply_markup=main_keyboard)
 
     elif dic[str(uchat)]['mode'] == 'info':
@@ -237,7 +245,7 @@ def start(bot, update):
                                         'leagues_keyboard': ReplyKeyboardMarkup([[]], one_time_keyboard=0),
                                         'events_keyboard': ReplyKeyboardMarkup([[]], one_time_keyboard=0),
                                         'ratios_keyboard': ReplyKeyboardMarkup([[]], one_time_keyboard=1),
-                                        'choice': '', 'max_bet': ''}
+                                        'choice': '', 'max_bet': '', 'league': ''}
     if user:
         bot.sendMessage(chat_id=update.message.chat_id, text='Мы рады, что вы вернулись', reply_markup=main_keyboard)
     else:
@@ -297,7 +305,7 @@ if __name__ == "__main__":
         print('Critical Error > Telegram Access Token is invalid. Terminal halted.\nCheck the configuration file.')
         exit()
 
-    con = data_control.Connection('root', 'root', 'betbot')
+    con = data_control.Connection('root', 'Yor8nsKt', 'betbot')
 
     users = (con.get_all_users())
     for user in users:
@@ -307,7 +315,7 @@ if __name__ == "__main__":
                           'leagues_keyboard': ReplyKeyboardMarkup([[]], one_time_keyboard=0),
                           'events_keyboard': ReplyKeyboardMarkup([[]], one_time_keyboard=0),
                           'ratios_keyboard': ReplyKeyboardMarkup([[]], one_time_keyboard=0),
-                          'choice': '', 'max_bet': ''}
+                          'choice': '', 'max_bet': '', 'league': ''}
 
     # Обработка команд из чата Telegram
     telegram_command_handle(updater)

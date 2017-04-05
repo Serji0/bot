@@ -125,63 +125,67 @@ class Connection:
         self.disconnect()
         return sports
 
-    def get_ratios_by_teams(self, teams):
+    def get_ratios_by_teams(self, teams, league):
         s = teams.find(' - ')
         s1 = teams.find('   ')
         team1 = teams[s1 + 3: s]
         team2 = teams[s + 3:]
         self.connect()
         c = self.connection.cursor()
-        c.execute('SELECT * from app_event WHERE team1 = %s AND team2 = %s', (str(team1), str(team2)))
+        c.execute('SELECT * from app_event WHERE team1 = %s AND team2 = %s AND league = %s AND status = "active"', (str(team1), str(team2), str(league)))
         event = list(c.fetchone())
         events1 = []
         buf = 'П1 - ' + str(event[6])
         events1.append([buf])
-        buf = 'X - ' + str(event[7])
-        events1[0].append(buf)
+        if float(event[7]) > 1:
+            buf = 'X - ' + str(event[7])
+            events1[0].append(buf)
         buf = 'П2 - ' + str(event[8])
         events1[0].append(buf)
-        buf = 'Ф1 ('
-        if str(event[16])[0] != '-' and str(event[16])[0] != '0':
-            buf += '+'
-        buf += str(event[16]) + ') - ' + str(event[17])
-        events1.append([buf])
-        buf = 'Ф2 ('
-        if str(event[18])[0] != '-' and str(event[18])[0] != '0':
-            buf += '+'
-        buf += str(event[18]) + ') - ' + str(event[19])
-        events1[1].append(buf)
-        buf = 'ТМ ' + str(event[9]) + ' - ' + str(event[11])
-        events1.append([buf])
-        buf = 'ТБ ' + str(event[9]) + ' - ' + str(event[10])
-        events1[2].append(buf)
+        if float(event[17]) > 1:
+            buf = 'Ф1 ('
+            if str(event[16])[0] != '-' and str(event[16])[0] != '0':
+                buf += '+'
+            buf += str(event[16]) + ') - ' + str(event[17])
+            events1.append([buf])
+            buf = 'Ф2 ('
+            if str(event[18])[0] != '-' and str(event[18])[0] != '0':
+                buf += '+'
+            buf += str(event[18]) + ') - ' + str(event[19])
+            events1[1].append(buf)
+        if float(event[11]) > 1:
+            buf = 'ТМ ' + str(event[9]) + ' - ' + str(event[11])
+            buf1 =[buf]
+            buf = 'ТБ ' + str(event[9]) + ' - ' + str(event[10])
+            buf1.append(buf)
+            events1.append(buf1)
         c.close()
         self.disconnect()
         return events1
 
 
-    def get_maxbet_by_teams(self, teams):
+    def get_maxbet_by_teams(self, teams, league):
         s = teams.find(' - ')
         s1 = teams.find('   ')
         team1 = teams[s1 + 3: s]
         team2 = teams[s + 3:]
         self.connect()
         c = self.connection.cursor()
-        c.execute('SELECT max_bet from app_event WHERE team1 = %s AND team2 = %s', (str(team1), str(team2)))
+        c.execute('SELECT max_bet from app_event WHERE team1 = %s AND team2 = %s AND league = %s', (str(team1), str(team2), str(league)))
         maxbet = c.fetchone()[0]
         c.close()
         self.disconnect()
         return maxbet
 
 
-    def get_event_id_by_teams(self, teams):
+    def get_event_id_by_teams(self, teams, league):
         s = teams.find(' - ')
         s1 = teams.find('   ')
         team1 = teams[s1 + 3: s]
         team2 = teams[s + 3:]
         self.connect()
         c = self.connection.cursor()
-        c.execute('SELECT id from app_event WHERE team1 = %s AND team2 = %s', (str(team1), str(team2)))
+        c.execute('SELECT id from app_event WHERE team1 = %s AND team2 = %s AND league = %s', (str(team1), str(team2), str(league)))
         id = c.fetchone()[0]
         c.close()
         self.disconnect()
@@ -199,8 +203,8 @@ class Connection:
         return bets
 
 
-    def add_bet(self, id, teams, choice, sum):
-        max = self.get_maxbet_by_teams(teams)
+    def add_bet(self, id, teams, choice, sum, league):
+        max = self.get_maxbet_by_teams(teams, league)
         if float(sum) > max:
             response = 'Слишком большая сумма ставки'
         elif float(sum) < 5:
@@ -211,7 +215,7 @@ class Connection:
             if balance < float(sum):
                 response = 'Недостаточно средств на счете'
             else:
-                event = self.get_event_id_by_teams(teams)
+                event = self.get_event_id_by_teams(teams, league)
                 status = self.get_event_by_id(event)[15]
                 if status != 'active':
                     response = 'Прием ставок на это событие завершен'
